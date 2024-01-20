@@ -73,6 +73,8 @@ void right() {
       position = 13;
     }
 
+    Serial.println(position);
+
 
     // Adjust the motor speed and direction based on the position
     if (position == 1) {
