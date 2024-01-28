@@ -12,13 +12,13 @@ const int MOTOR_B_IN3 = 10;  // Left motor direction control 1
 const int MOTOR_B_IN4 = 11;  // Left motor direction control 2
 
 // Motor speed constants
-const int BASE_SPEED = 100; // base speed of the motors
-const int MAX_SPEED = 255;  // max motor speed
+const int BASE_SPEED = 10; // base speed of the motors
+const int MAX_SPEED = 80;  // max motor speed
 
 // PID constants
-float Kp = 0.66; // Proportional gain
-float Ki = 0.1;  // Integral gain
-float Kd = 0.5;  // Derivative gain
+float Kp = 0.3; // Proportional gain
+float Ki = 0;  // Integral gain
+float Kd = 0;  // Derivative gain
 
 // Error variables
 int lastError = 0;
@@ -65,7 +65,7 @@ void setup() {
 
   // Calibrate sensors during setup
   Serial.println("Starting calibration...");
-  for (uint16_t i = 0; i < 400; i++) { // 400 * 25 ms = 10 seconds
+  for (uint16_t i = 0; i < 200; i++) { // 400 * 25 ms = 10 seconds
     qtr.calibrate();
   }
   Serial.println("Calibration complete");
@@ -75,8 +75,11 @@ void loop() {
   // read calibrated sensor values and obtain a measure of the line position
   uint16_t position = qtr.readLineBlack(sensorValues);
 
-  // Compute the error from the center
-  int error = position - (SensorCount-1)*1000/2;
+  // Compute the error from the center with a bias towards the right
+  // This will make the robot think it's more to the right, causing left turns
+  int error = position - ((SensorCount-1)*1000/2 + 500); // Adding a constant bias
+
+  // Rest of the PID calculations remains the same
 
   // Integral term calculation
   integral += error;
@@ -90,13 +93,13 @@ void loop() {
   // Calculate the motor speed difference using the PID controller
   int speedDifference = Kp * error + Ki * integral + Kd * derivative;
 
-  // Calculate the speeds for each motor
-  int speedA = BASE_SPEED + speedDifference;
-  int speedB = BASE_SPEED - speedDifference;
+  // Adjust the speeds for each motor to prefer left turn
+  int speedA = BASE_SPEED + speedDifference; // Right motor
+  int speedB = BASE_SPEED - speedDifference; // Left motor
 
-  // Constrain the speeds to the [0, MAX_SPEED] interval
-  speedA = constrain(speedA, 0, MAX_SPEED);
-  speedB = constrain(speedB, 0, MAX_SPEED);
+  // Additional bias towards the left turn
+  speedA = constrain(speedA + 10, 0, MAX_SPEED); // Increase right motor speed slightly
+  speedB = constrain(speedB - 10, 0, MAX_SPEED); // Decrease left motor speed slightly
 
   // Set the motor speeds
   setMotors(speedA, speedB);
