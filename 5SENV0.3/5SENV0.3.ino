@@ -2,13 +2,19 @@
 #include <LiquidCrystal_I2C.h>
 LiquidCrystal_I2C lcd(0x27, 20, 4); // set the LCD address to 0x27 for a 16 chars and 2 line display
 unsigned long startTime;
-int wallCount = 0;
+float Kp =100; // Proportional gain
+float Ki = 0.01; // Integral gain
+float Kd = 0.15; // Derivative gain
+
+float previous_error = 0;
+float integral = 0;
 
 int sensorPin1 = A15;
 int sensorPin2 = A14;
 int sensorPin3 = A13;
 int sensorPin4 = A12;
 int sensorPin5 = A11;
+
 Ultrasonic leftus(23, 25, 7000UL);
 const int MOTOR_A_ENA = 13; // Right motor speed control
 const int MOTOR_A_IN1 = 12;  // Right motor direction control 1
@@ -82,29 +88,22 @@ void right() {
       position = 1;
     }
 
-    // Adjust the motor speed and direction based on the position
-    if (position == 1) {
-      // Turn left
-      move(-60, 60);
+    float error = position - 3; // Assuming the center position is 3
+    integral = integral + error;
+    float derivative = error - previous_error;
+    float output = Kp * error + Ki * integral + Kd * derivative;
+    previous_error = error;
 
-    } else if (position == 2) {
-      move(0, 60);
-    } else if (position == 3) {
-      // Go straight
-      move(60, 60);
-    } else if (position == 4) {
-      // Turn right slightly
-      move(60, 0);
-    } else if (position == 5) {
+    int baseSpeed = 60; // Base speed for both motors
+    int leftMotorSpeed = baseSpeed + output;
+    int rightMotorSpeed = baseSpeed - output;
+    // Constrain the speeds to avoid negative values or values greater than max speed
+    leftMotorSpeed = constrain(leftMotorSpeed, -255, 255);
+    rightMotorSpeed = constrain(rightMotorSpeed, -255, 255);
+    move(leftMotorSpeed, rightMotorSpeed);
 
-      // Turn right
-      move(75, -60);
-
-
-    }
   }
 }
-
 void left() {
   // Read the sensor values
   int sensorValue1 = analogRead(sensorPin1);
@@ -114,10 +113,7 @@ void left() {
   int sensorValue5 = analogRead(sensorPin5);
   // Check if the robot is on the line
   if (sensorValue1 < threshold && sensorValue2 < threshold && sensorValue3 < threshold && sensorValue4 < threshold && sensorValue5 < threshold) {
-    if (wallCount == 0 && distanceL < 30 && distanceL != 0) {
-      move(70, 0);
-
-    }
+    // Stop the robot
     move(70, 0);
   }
   if (sensorValue1 > threshold && sensorValue2 > threshold && sensorValue3 > threshold && sensorValue4 > threshold && sensorValue5 > threshold) {
@@ -147,26 +143,20 @@ void left() {
       position = 5;
     }
 
+    float error = position - 3; // Assuming the center position is 3
+    integral = integral + error;
+    float derivative = error - previous_error;
+    float output = Kp * error + Ki * integral + Kd * derivative;
+    previous_error = error;
 
-    if (position == 1) {
-      // Turn left
-      move(-60, 65);
+    int baseSpeed = 60; // Base speed for both motors
+    int leftMotorSpeed = baseSpeed + output;
+    int rightMotorSpeed = baseSpeed - output;
+    // Constrain the speeds to avoid negative values or values greater than max speed
+    leftMotorSpeed = constrain(leftMotorSpeed, -255, 255);
+    rightMotorSpeed = constrain(rightMotorSpeed, -255, 255);
+    move(leftMotorSpeed, rightMotorSpeed);
 
-    } else if (position == 2) {
-      move(0, 65);
-    } else if (position == 3) {
-      // Go straight
-      move(65, 65);
-    } else if (position == 4) {
-      // Turn right slightly
-      move(65, 0);
-    } else if (position == 5) {
-
-      // Turn right
-      move(65, -60);
-
-
-    }
   }
 }
 void printOnLcd(String c ) {
@@ -194,21 +184,22 @@ void setup() {
   lcd.init();
   startTime = millis(); // Initialize startTime to the current time
 }
-void loop() {
+int wallCount = 0;
+void loop0() {
   unsigned long currentTime = millis(); // Get the current time
   distanceL = leftus.read();
   // Serial.print("Distance in CM: ");
   // Serial.println(distanceL);
   Serial.println("ana mazal madkholt lwalo");
-  if (currentTime - startTime >= 2700 && currentTime - startTime <= 4000 && wallCount == 0) { // Check if 1000 ms have passed
+  if (currentTime - startTime >= 2000 && currentTime - startTime <= 4000 && wallCount == 0) { // Check if 1000 ms have passed
     printOnLcd("RED");
-  } else if (currentTime - startTime >= 5900 && wallCount == 0) {
-    printOnLcd("    ");
+
   }
   if (distanceL != 0 && distanceL < 20 && wallCount == 0) {
-    while (distanceL < 30) {
-      move(80, 65);
-       distanceL = leftus.read();
+    for (int i = 0; i < 200; i++) {
+      left();
+      delay(1);
+      Serial.println("ana f for");
     }
     Serial.println("ana khrjt mn for");
     wallCount++;
@@ -236,6 +227,6 @@ void loop() {
   }
 
 }
-void loopO() {
+void loop() {
   left();
 }
