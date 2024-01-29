@@ -10,6 +10,8 @@ int sensorPin3 = A13;
 int sensorPin4 = A12;
 int sensorPin5 = A11;
 Ultrasonic leftus(23, 25, 7000UL);
+Ultrasonic frontus(27, 29, 7000UL);
+
 const int MOTOR_A_ENA = 13; // Right motor speed control
 const int MOTOR_A_IN1 = 12;  // Right motor direction control 1
 const int MOTOR_A_IN2 = 11;  // Right motor direction control 2
@@ -17,6 +19,7 @@ const int MOTOR_B_ENB = 8;  // Left motor speed control
 const int MOTOR_B_IN3 = 9;  // Left motor direction control 1
 const int MOTOR_B_IN4 = 10;  // Left motor direction control 2
 int distanceL;
+int distanceF;
 // Define the threshold values for the sensors
 int threshold = 500;
 
@@ -163,7 +166,7 @@ void left() {
     } else if (position == 5) {
 
       // Turn right
-      move(65, -60);
+      move(65, -80);
 
 
     }
@@ -197,6 +200,8 @@ void setup() {
 void loop() {
   unsigned long currentTime = millis(); // Get the current time
   distanceL = leftus.read();
+  distanceF = frontus.read();
+
   // Serial.print("Distance in CM: ");
   // Serial.println(distanceL);
   Serial.println("ana mazal madkholt lwalo");
@@ -206,9 +211,13 @@ void loop() {
     printOnLcd("    ");
   }
   if (distanceL != 0 && distanceL < 20 && wallCount == 0) {
-    while (distanceL < 30) {
-      move(80, 65);
-       distanceL = leftus.read();
+    while (distanceL < 50) {
+      move(80, 75);
+      distanceL = leftus.read();
+    }
+    for (int i = 0; i < 50; i++) {
+      left();
+delay(1);
     }
     Serial.println("ana khrjt mn for");
     wallCount++;
@@ -231,10 +240,14 @@ void loop() {
     Serial.println("ana ghadi left");
   }
 
-  if (currentTime - startTime >= 900 && wallCount == 2) { // Check if 1000 ms have passed
+  if (currentTime - startTime >= 1000 && wallCount == 2) { // Check if 1000 ms have passed
     printOnLcd("LOL");
   }
-
+  if (distanceF != 0 && distanceF < 15 && wallCount == 2) {
+    move(0, 0);
+    delay(5000);
+    wallCount++;
+  }
 }
 void loopO() {
   left();
